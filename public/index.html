@@ -50,6 +50,17 @@
 					<input class="input" type="text" id="theme" placeholder="loyalty, the city, my mama, late nights…">
 				</div>
 
+				<div class="field">
+					<label class="field__label">Markov order <span class="field__hint" id="order-hint">2 — balanced</span></label>
+					<div class="order-grid" id="order-grid">
+						<button type="button" class="order-pill" data-order="1">1</button>
+						<button type="button" class="order-pill is-active" data-order="2">2</button>
+						<button type="button" class="order-pill" data-order="3">3</button>
+						<button type="button" class="order-pill" data-order="4">4</button>
+						<button type="button" class="order-pill" data-order="5">5</button>
+					</div>
+				</div>
+
 				<div class="field" id="claude-toggle-wrap" hidden>
 					<label class="row claude-toggle">
 						<input type="checkbox" id="useClaude">

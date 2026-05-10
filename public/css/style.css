@@ -322,6 +322,33 @@ button, input, select, textarea { font: inherit; color: inherit; }
 	.artist-grid { grid-template-columns: 1fr; }
 }
 
+/* Markov order grid: small numbered pills 1..5
+   ────────────────────────────── */
+.order-grid {
+	display: grid;
+	grid-template-columns: repeat(5, 1fr);
+	gap: var(--space-2);
+}
+.order-pill {
+	background: hsla(0 0% 0% / 0.4);
+	border: 1px solid var(--surface-stroke);
+	border-radius: var(--radius-md);
+	padding: 12px 0;
+	cursor: pointer;
+	color: var(--text);
+	font-family: "Outfit", sans-serif;
+	font-weight: 700;
+	font-size: 1.1rem;
+	transition: all 200ms var(--ease-out);
+}
+.order-pill:hover { border-color: var(--surface-stroke-strong); }
+.order-pill.is-active {
+	background: var(--gradient-brand);
+	border-color: transparent;
+	color: hsl(0 0% 6%);
+	box-shadow: 0 8px 24px hsla(20 70% 60% / 0.35);
+}
+
 /* Buttons
    ────────────────────────────── */
 .btn {

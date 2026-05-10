@@ -230,3 +230,63 @@ test("ReverseMarkov returns null for end-words not seen in corpus", () => {
 	const m = new ReverseMarkov(["the cat sat on the mat"]);
 	assert.equal(m.generateLineEndingWith("zebra", () => 0.5), null);
 });
+
+test("ReverseMarkov supports configurable order (1, 2, 3)", () => {
+	const lines = [
+		"I keep walking down the road",
+		"every memory took a hold",
+		"never thought we would grow old",
+		"every promise that we sold",
+	];
+	for (const order of [1, 2, 3]) {
+		const m = new ReverseMarkov(lines, order);
+		const stats = m.stats();
+		assert.equal(stats.order, order);
+		assert.ok(stats.contexts > 0, `order ${order} has contexts`);
+	}
+});
+
+test("higher order produces fewer distinct contexts (with same corpus)", () => {
+	const lines = [
+		"I keep walking down the long road home",
+		"every memory took a hold of me",
+		"never thought we would grow old together",
+		"every promise that we ever sold or kept",
+	];
+	const m1 = new ReverseMarkov(lines, 1);
+	const m3 = new ReverseMarkov(lines, 3);
+	assert.ok(m1.stats().contexts >= m3.stats().contexts,
+		`order 1 should have ≥ order 3 contexts: ${m1.stats().contexts} vs ${m3.stats().contexts}`);
+});
+
+test("generateLyrics accepts and echoes back an order parameter", () => {
+	const out = generateLyrics({ artists: "drake", order: 1, seed: 7 });
+	assert.equal(out.order, 1);
+	const out3 = generateLyrics({ artists: "drake", order: 3, seed: 7 });
+	assert.equal(out3.order, 3);
+});
+
+test("generateLyrics defaults to order 2 when omitted", () => {
+	const out = generateLyrics({ artists: "drake", seed: 7 });
+	assert.equal(out.order, 2);
+});
+
+test("generateLyrics clamps order outside [1, 5]", () => {
+	const low = generateLyrics({ artists: "drake", order: 0, seed: 7 });
+	assert.equal(low.order, 1);
+	const high = generateLyrics({ artists: "drake", order: 999, seed: 7 });
+	assert.equal(high.order, 5);
+});
+
+test("generateLyrics produces valid output at every supported order", () => {
+	for (let order = 1; order <= 5; order++) {
+		const out = generateLyrics({ artists: ["drake", "jcole"], order, seed: 13 });
+		assert.equal(out.sections.length, 6);
+		for (const s of out.sections) {
+			assert.ok(s.lines.length > 0, `order ${order} ${s.label} has lines`);
+			for (const line of s.lines) {
+				assert.ok(line.length > 0, `non-empty line at order ${order}`);
+			}
+		}
+	}
+});

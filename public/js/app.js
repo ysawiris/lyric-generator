@@ -3,6 +3,8 @@ const $ = (sel) => document.querySelector(sel);
 const els = {
 	form: $("#form"),
 	artistGrid: $("#artist-grid"),
+	orderGrid: $("#order-grid"),
+	orderHint: $("#order-hint"),
 	theme: $("#theme"),
 	useClaude: $("#useClaude"),
 	claudeWrap: $("#claude-toggle-wrap"),
@@ -13,6 +15,16 @@ const els = {
 	reroll: $("#reroll"),
 	toastHost: $("#toast-host"),
 };
+
+const ORDER_HINTS = {
+	1: "1 — chaotic, near word salad",
+	2: "2 — balanced (default)",
+	3: "3 — coherent, leans on corpus",
+	4: "4 — mostly memorized",
+	5: "5 — verbatim corpus echoes",
+};
+
+let selectedOrder = 2;
 
 const SUBLINES = {
 	drake: "Late nights, the 6, real ones",
@@ -109,6 +121,7 @@ function renderLoading() {
 function renderResult(result) {
 	const meta = [];
 	if (result.theme) meta.push(`Theme: ${escapeHtml(result.theme)}`);
+	if (result.mode === "offline" && result.order != null) meta.push(`Order: ${result.order}`);
 	if (result.mode === "offline" && result.seed != null) meta.push(`Seed: ${result.seed}`);
 	if (result.mode === "claude") meta.push(`Mode: Claude`);
 
@@ -161,11 +174,11 @@ function sectionsToText(sections) {
 	return sections.map((s) => `[${s.label}]\n${s.lines.join("\n")}`).join("\n\n");
 }
 
-async function generate({ artists, theme, useClaude }) {
+async function generate({ artists, theme, useClaude, order }) {
 	const res = await fetch("/api/generate", {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ artists, theme, useClaude }),
+		body: JSON.stringify({ artists, theme, useClaude, order }),
 	});
 	if (!res.ok) {
 		const err = await res.json().catch(() => ({}));
@@ -182,13 +195,14 @@ async function handleSubmit() {
 	}
 	const theme = els.theme.value.trim();
 	const useClaude = els.useClaude?.checked || false;
+	const order = selectedOrder;
 
 	els.generateBtn.disabled = true;
 	els.generateLabel.textContent = "Generating…";
 	renderLoading();
 
 	try {
-		const result = await generate({ artists, theme, useClaude });
+		const result = await generate({ artists, theme, useClaude, order });
 		renderResult(result);
 		els.generateLabel.textContent = "Generate again";
 	} catch (err) {
@@ -200,6 +214,21 @@ async function handleSubmit() {
 		els.generateBtn.disabled = false;
 	}
 }
+
+function setOrder(n) {
+	selectedOrder = n;
+	els.orderGrid.querySelectorAll(".order-pill").forEach((p) => {
+		p.classList.toggle("is-active", Number(p.dataset.order) === n);
+	});
+	if (els.orderHint) els.orderHint.textContent = ORDER_HINTS[n] || `${n}`;
+}
+
+els.orderGrid?.addEventListener("click", (e) => {
+	const btn = e.target.closest(".order-pill");
+	if (!btn) return;
+	const n = Number(btn.dataset.order);
+	if (Number.isFinite(n)) setOrder(n);
+});
 
 async function init() {
 	try {

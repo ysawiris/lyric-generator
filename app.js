@@ -19,11 +19,15 @@ app.get("/api/artists", (_req, res) => {
 		display: ARTISTS[k].display,
 		color: ARTISTS[k].color,
 	}));
-	res.json({ artists, claudeAvailable: isClaudeAvailable() });
+	res.json({
+		artists,
+		claudeAvailable: isClaudeAvailable(),
+		orders: { min: 1, max: 5, default: 2 },
+	});
 });
 
 app.post("/api/generate", async (req, res) => {
-	const { artists, theme = "", seed, useClaude = false } = req.body || {};
+	const { artists, theme = "", seed, order, useClaude = false } = req.body || {};
 
 	try {
 		if (useClaude && isClaudeAvailable()) {
@@ -32,7 +36,8 @@ app.post("/api/generate", async (req, res) => {
 		}
 
 		const seedNum = seed === undefined || seed === null || seed === "" ? undefined : Number(seed);
-		const result = generateLyrics({ artists, theme, seed: seedNum });
+		const orderNum = order === undefined || order === null || order === "" ? undefined : Number(order);
+		const result = generateLyrics({ artists, theme, seed: seedNum, order: orderNum });
 		return res.json({ ...result, text: lyricsToText(result), mode: "offline" });
 	} catch (err) {
 		console.error("generate failed:", err.message);
