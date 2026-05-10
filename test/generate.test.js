@@ -4,6 +4,7 @@ import { generateLyrics, lyricsToText } from "../lib/generate.js";
 import { ARTIST_KEYS, ARTISTS, mergeArtists } from "../lib/wordbanks.js";
 import { rhymes, rhymeKey, findRhymingLine, lastWord } from "../lib/rhyme.js";
 import { parseSections } from "../lib/claude.js";
+import { ReverseMarkov } from "../lib/markov.js";
 
 test("rhymeKey extracts trailing vowel cluster + consonants", () => {
 	assert.equal(rhymeKey("midnight"), "ight");
@@ -185,7 +186,7 @@ test("seeds are echoed back in the result for reproducibility links", () => {
 	assert.equal(out.seed, 12345);
 });
 
-test("rhyme density: a meaningful share of couplets rhyme (smoke test)", () => {
+test("rhyme density (Markov-driven): well over 50% of couplets rhyme", () => {
 	let totalCouplets = 0;
 	let rhymingCouplets = 0;
 	for (let seed = 1; seed <= 20; seed++) {
@@ -200,5 +201,32 @@ test("rhyme density: a meaningful share of couplets rhyme (smoke test)", () => {
 		}
 	}
 	const ratio = rhymingCouplets / totalCouplets;
-	assert.ok(ratio > 0.22, `rhyme ratio should be > 22%, got ${(ratio * 100).toFixed(1)}%`);
+	assert.ok(ratio > 0.5, `rhyme ratio should be > 50% with Markov, got ${(ratio * 100).toFixed(1)}%`);
+});
+
+test("ReverseMarkov ingests lines and indexes rhyme keys", () => {
+	const m = new ReverseMarkov([
+		"the cat sat on the mat",
+		"the dog lay near the cat",
+	]);
+	const rhymingWithMat = m.wordsRhymingWith("hat");
+	assert.ok(rhymingWithMat.includes("cat") || rhymingWithMat.includes("mat"));
+});
+
+test("ReverseMarkov generates a line ending in the requested word", () => {
+	const m = new ReverseMarkov([
+		"I keep walking down the road",
+		"every memory took a hold",
+		"never thought we would grow old",
+		"every promise that we sold",
+	]);
+	const rand = (() => { let s = 1; return () => { s = (s * 16807) % 2147483647; return s / 2147483647; }; })();
+	const line = m.generateLineEndingWith("old", rand);
+	assert.ok(line, "generates a line");
+	assert.ok(line.endsWith("old"), `line should end with 'old', got: ${line}`);
+});
+
+test("ReverseMarkov returns null for end-words not seen in corpus", () => {
+	const m = new ReverseMarkov(["the cat sat on the mat"]);
+	assert.equal(m.generateLineEndingWith("zebra", () => 0.5), null);
 });
