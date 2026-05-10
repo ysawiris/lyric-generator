@@ -290,3 +290,78 @@ test("generateLyrics produces valid output at every supported order", () => {
 		}
 	}
 });
+
+test("generateLyrics defaults to AABB scheme", () => {
+	const out = generateLyrics({ artists: "drake", seed: 7 });
+	assert.equal(out.scheme, "AABB");
+	assert.equal(out.schemePattern, "AABB");
+});
+
+test("generateLyrics rejects unknown scheme", () => {
+	assert.throws(() => generateLyrics({ artists: "drake", scheme: "bogus" }), /Unknown rhyme scheme/);
+});
+
+test("each rhyme scheme produces valid 4-line full sections", () => {
+	for (const key of ["AABB", "ABAB", "AAAA", "ABBA", "AABA", "FREE"]) {
+		const out = generateLyrics({ artists: ["drake", "kendrick"], scheme: key, seed: 21 });
+		assert.equal(out.scheme.toUpperCase(), key);
+		const verse1 = out.sections.find((s) => s.label === "Verse 1");
+		assert.equal(verse1.lines.length, 4, `${key} verse has 4 lines`);
+		const bridge = out.sections.find((s) => s.label === "Bridge");
+		assert.equal(bridge.lines.length, 2, `${key} bridge has 2 lines`);
+	}
+});
+
+// Per-scheme structural rhyme tests: lines tagged with the same character
+// must rhyme with each other in the generated output.
+function rhymesByPosition(lines, pattern) {
+	const groups = {};
+	for (let i = 0; i < pattern.length; i++) {
+		const ch = pattern[i];
+		if (ch === "F") continue;
+		(groups[ch] ||= []).push(lines[i]);
+	}
+	return groups;
+}
+
+test("AABB: line 1 rhymes with line 2 most of the time", () => {
+	let total = 0;
+	let hits = 0;
+	for (let seed = 1; seed <= 20; seed++) {
+		const out = generateLyrics({ artists: "drake", scheme: "AABB", seed });
+		for (const s of out.sections) {
+			if (s.lines.length < 2) continue;
+			total++;
+			if (rhymes(lastWord(s.lines[0]), lastWord(s.lines[1]))) hits++;
+		}
+	}
+	assert.ok(hits / total > 0.6, `AABB couplet rhyme rate should exceed 60%, got ${(hits / total * 100).toFixed(1)}%`);
+});
+
+test("ABAB: line 1 rhymes with line 3 most of the time", () => {
+	let total = 0;
+	let hits = 0;
+	for (let seed = 1; seed <= 20; seed++) {
+		const out = generateLyrics({ artists: "drake", scheme: "ABAB", seed });
+		for (const s of out.sections) {
+			if (s.lines.length < 4) continue;
+			total++;
+			if (rhymes(lastWord(s.lines[0]), lastWord(s.lines[2]))) hits++;
+		}
+	}
+	assert.ok(hits / total > 0.6, `ABAB A-rhyme rate should exceed 60%, got ${(hits / total * 100).toFixed(1)}%`);
+});
+
+test("AAAA: line 1 rhymes with line 4 most of the time", () => {
+	let total = 0;
+	let hits = 0;
+	for (let seed = 1; seed <= 20; seed++) {
+		const out = generateLyrics({ artists: "drake", scheme: "AAAA", seed });
+		for (const s of out.sections) {
+			if (s.lines.length < 4) continue;
+			total++;
+			if (rhymes(lastWord(s.lines[0]), lastWord(s.lines[3]))) hits++;
+		}
+	}
+	assert.ok(hits / total > 0.6, `AAAA full-block rhyme should exceed 60%, got ${(hits / total * 100).toFixed(1)}%`);
+});

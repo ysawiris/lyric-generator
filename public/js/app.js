@@ -5,6 +5,8 @@ const els = {
 	artistGrid: $("#artist-grid"),
 	orderGrid: $("#order-grid"),
 	orderHint: $("#order-hint"),
+	schemeGrid: $("#scheme-grid"),
+	schemeHint: $("#scheme-hint"),
 	theme: $("#theme"),
 	useClaude: $("#useClaude"),
 	claudeWrap: $("#claude-toggle-wrap"),
@@ -25,6 +27,8 @@ const ORDER_HINTS = {
 };
 
 let selectedOrder = 2;
+let selectedScheme = "AABB";
+let schemesMeta = [];
 
 const SUBLINES = {
 	drake: "Late nights, the 6, real ones",
@@ -121,6 +125,7 @@ function renderLoading() {
 function renderResult(result) {
 	const meta = [];
 	if (result.theme) meta.push(`Theme: ${escapeHtml(result.theme)}`);
+	if (result.scheme) meta.push(`Scheme: ${escapeHtml(result.scheme)}`);
 	if (result.mode === "offline" && result.order != null) meta.push(`Order: ${result.order}`);
 	if (result.mode === "offline" && result.seed != null) meta.push(`Seed: ${result.seed}`);
 	if (result.mode === "claude") meta.push(`Mode: Claude`);
@@ -174,11 +179,11 @@ function sectionsToText(sections) {
 	return sections.map((s) => `[${s.label}]\n${s.lines.join("\n")}`).join("\n\n");
 }
 
-async function generate({ artists, theme, useClaude, order }) {
+async function generate({ artists, theme, useClaude, order, scheme }) {
 	const res = await fetch("/api/generate", {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ artists, theme, useClaude, order }),
+		body: JSON.stringify({ artists, theme, useClaude, order, scheme }),
 	});
 	if (!res.ok) {
 		const err = await res.json().catch(() => ({}));
@@ -196,13 +201,14 @@ async function handleSubmit() {
 	const theme = els.theme.value.trim();
 	const useClaude = els.useClaude?.checked || false;
 	const order = selectedOrder;
+	const scheme = selectedScheme;
 
 	els.generateBtn.disabled = true;
 	els.generateLabel.textContent = "Generating…";
 	renderLoading();
 
 	try {
-		const result = await generate({ artists, theme, useClaude, order });
+		const result = await generate({ artists, theme, useClaude, order, scheme });
 		renderResult(result);
 		els.generateLabel.textContent = "Generate again";
 	} catch (err) {
@@ -230,11 +236,47 @@ els.orderGrid?.addEventListener("click", (e) => {
 	if (Number.isFinite(n)) setOrder(n);
 });
 
+function renderSchemes(schemes, defaultKey) {
+	if (!els.schemeGrid) return;
+	schemesMeta = schemes;
+	els.schemeGrid.innerHTML = schemes
+		.map(
+			(s) => `
+		<button type="button" class="scheme-pill ${s.key === defaultKey ? "is-active" : ""}" data-scheme="${escapeHtml(s.key)}" title="${escapeHtml(s.description)}">
+			<span class="scheme-pill__name">${escapeHtml(s.name)}</span>
+			<span class="scheme-pill__visual">${escapeHtml(s.visual || s.pattern)}</span>
+		</button>
+	`
+		)
+		.join("");
+	setScheme(defaultKey);
+}
+
+function setScheme(key) {
+	selectedScheme = key;
+	const meta = schemesMeta.find((s) => s.key === key);
+	els.schemeGrid.querySelectorAll(".scheme-pill").forEach((p) => {
+		p.classList.toggle("is-active", p.dataset.scheme === key);
+	});
+	if (els.schemeHint && meta) {
+		els.schemeHint.textContent = `${meta.name} — ${meta.description.split(" —")[0].split(" - ")[0].split(".")[0]}`;
+	}
+}
+
+els.schemeGrid?.addEventListener("click", (e) => {
+	const btn = e.target.closest(".scheme-pill");
+	if (!btn) return;
+	setScheme(btn.dataset.scheme);
+});
+
 async function init() {
 	try {
 		const res = await fetch("/api/artists");
-		const { artists, claudeAvailable } = await res.json();
+		const { artists, schemes, defaultScheme, claudeAvailable } = await res.json();
 		renderArtists(artists);
+		if (schemes && schemes.length) {
+			renderSchemes(schemes, defaultScheme || schemes[0].key);
+		}
 		if (claudeAvailable) {
 			els.claudeWrap.hidden = false;
 			els.modePill.textContent = "Claude available";

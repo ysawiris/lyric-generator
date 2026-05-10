@@ -349,6 +349,51 @@ button, input, select, textarea { font: inherit; color: inherit; }
 	box-shadow: 0 8px 24px hsla(20 70% 60% / 0.35);
 }
 
+/* Rhyme scheme grid: cards with name + visual diagram
+   ────────────────────────────── */
+.scheme-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+	gap: var(--space-2);
+}
+.scheme-pill {
+	background: hsla(0 0% 0% / 0.4);
+	border: 1px solid var(--surface-stroke);
+	border-radius: var(--radius-md);
+	padding: 12px 10px;
+	cursor: pointer;
+	color: var(--text);
+	font-family: inherit;
+	transition: all 200ms var(--ease-out);
+	text-align: center;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	align-items: center;
+}
+.scheme-pill:hover { border-color: var(--surface-stroke-strong); transform: translateY(-1px); }
+.scheme-pill__name {
+	font-family: "Outfit", sans-serif;
+	font-weight: 700;
+	font-size: 0.9rem;
+	letter-spacing: 0.06em;
+}
+.scheme-pill__visual {
+	font-family: ui-monospace, "SF Mono", Menlo, monospace;
+	font-size: 0.72rem;
+	color: var(--text-muted);
+	letter-spacing: 0.04em;
+}
+.scheme-pill.is-active {
+	background: var(--gradient-brand);
+	border-color: transparent;
+	color: hsl(0 0% 6%);
+	box-shadow: 0 8px 24px hsla(20 70% 60% / 0.35);
+}
+.scheme-pill.is-active .scheme-pill__visual {
+	color: hsla(0 0% 0% / 0.65);
+}
+
 /* Buttons
    ────────────────────────────── */
 .btn {
