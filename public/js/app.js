@@ -2,8 +2,7 @@ const $ = (sel) => document.querySelector(sel);
 
 const els = {
 	form: $("#form"),
-	vibeGrid: $("#vibe-grid"),
-	vibeInput: $("#vibe"),
+	artistGrid: $("#artist-grid"),
 	theme: $("#theme"),
 	useClaude: $("#useClaude"),
 	claudeWrap: $("#claude-toggle-wrap"),
@@ -15,7 +14,13 @@ const els = {
 	toastHost: $("#toast-host"),
 };
 
-let lastResult = null;
+const SUBLINES = {
+	drake: "Late nights, the 6, real ones",
+	jcole: "Storytelling, faith, the Ville",
+	kendrick: "Compton, layers, the throne",
+};
+
+const selectedArtists = new Set();
 
 function toast(message, kind = "ok") {
 	const el = document.createElement("div");
@@ -38,29 +43,64 @@ function escapeHtml(s) {
 	})[c]);
 }
 
-function renderVibes(vibes) {
-	els.vibeGrid.innerHTML = vibes
+function renderArtists(artists) {
+	els.artistGrid.innerHTML = artists
 		.map(
-			(v, i) => `
-		<button type="button" class="vibe-pill ${i === 0 ? "is-active" : ""}" data-vibe="${escapeHtml(v)}">${escapeHtml(v)}</button>
+			(a) => `
+		<button type="button" class="artist-pill" data-key="${escapeHtml(a.key)}" style="--col: ${a.color}">
+			<span class="artist-pill__check" aria-hidden="true">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+			</span>
+			<span class="artist-pill__name">${escapeHtml(a.display)}</span>
+			<span class="artist-pill__sub">${escapeHtml(SUBLINES[a.key] || "")}</span>
+		</button>
 	`
 		)
 		.join("");
-	els.vibeInput.value = vibes[0];
 
-	els.vibeGrid.addEventListener("click", (e) => {
-		const btn = e.target.closest("[data-vibe]");
+	// Default: pre-select Drake
+	toggleArtist("drake");
+
+	els.artistGrid.addEventListener("click", (e) => {
+		const btn = e.target.closest(".artist-pill");
 		if (!btn) return;
-		els.vibeGrid.querySelectorAll(".vibe-pill").forEach((p) => p.classList.remove("is-active"));
-		btn.classList.add("is-active");
-		els.vibeInput.value = btn.dataset.vibe;
+		toggleArtist(btn.dataset.key);
 	});
+}
+
+function toggleArtist(key) {
+	const btn = els.artistGrid.querySelector(`[data-key="${key}"]`);
+	if (!btn) return;
+	if (selectedArtists.has(key)) {
+		// Don't let user de-select the last one
+		if (selectedArtists.size === 1) return;
+		selectedArtists.delete(key);
+		btn.classList.remove("is-active");
+	} else {
+		selectedArtists.add(key);
+		btn.classList.add("is-active");
+	}
+	updateGenerateLabel();
+}
+
+function updateGenerateLabel() {
+	const count = selectedArtists.size;
+	if (count === 0) {
+		els.generateLabel.textContent = "Pick an artist";
+		els.generateBtn.disabled = true;
+	} else if (count === 1) {
+		els.generateLabel.textContent = "Generate the verse";
+		els.generateBtn.disabled = false;
+	} else {
+		els.generateLabel.textContent = `Blend ${count} voices`;
+		els.generateBtn.disabled = false;
+	}
 }
 
 function renderLoading() {
 	els.output.innerHTML = `
 		<div class="loading">
-			<div>Writing your song…</div>
+			<div>Writing the verse…</div>
 			<div class="loading__bar"></div>
 		</div>
 	`;
@@ -93,7 +133,7 @@ function renderResult(result) {
 		<article class="song">
 			<header class="song__head">
 				<div>
-					<h2 class="song__title">${escapeHtml(capitalize(result.vibe))}</h2>
+					<h2 class="song__title">${escapeHtml(result.display || result.artists.join(" × "))}</h2>
 					<div class="song__meta">${meta.join(" · ")}</div>
 				</div>
 				<div class="song__actions">
@@ -117,19 +157,15 @@ function renderResult(result) {
 	els.reroll.hidden = false;
 }
 
-function capitalize(s) {
-	return s ? s[0].toUpperCase() + s.slice(1) : s;
-}
-
 function sectionsToText(sections) {
 	return sections.map((s) => `[${s.label}]\n${s.lines.join("\n")}`).join("\n\n");
 }
 
-async function generate({ vibe, theme, useClaude }) {
+async function generate({ artists, theme, useClaude }) {
 	const res = await fetch("/api/generate", {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ vibe, theme, useClaude }),
+		body: JSON.stringify({ artists, theme, useClaude }),
 	});
 	if (!res.ok) {
 		const err = await res.json().catch(() => ({}));
@@ -139,7 +175,11 @@ async function generate({ vibe, theme, useClaude }) {
 }
 
 async function handleSubmit() {
-	const vibe = els.vibeInput.value;
+	const artists = [...selectedArtists];
+	if (artists.length === 0) {
+		toast("Pick at least one artist", "err");
+		return;
+	}
 	const theme = els.theme.value.trim();
 	const useClaude = els.useClaude?.checked || false;
 
@@ -148,24 +188,24 @@ async function handleSubmit() {
 	renderLoading();
 
 	try {
-		const result = await generate({ vibe, theme, useClaude });
-		lastResult = result;
+		const result = await generate({ artists, theme, useClaude });
 		renderResult(result);
+		els.generateLabel.textContent = "Generate again";
 	} catch (err) {
 		console.error(err);
 		els.output.innerHTML = "";
 		toast(err.message || "Generation failed", "err");
+		els.generateLabel.textContent = "Try again";
 	} finally {
 		els.generateBtn.disabled = false;
-		els.generateLabel.textContent = "Generate again";
 	}
 }
 
 async function init() {
 	try {
-		const res = await fetch("/api/vibes");
-		const { vibes, claudeAvailable } = await res.json();
-		renderVibes(vibes);
+		const res = await fetch("/api/artists");
+		const { artists, claudeAvailable } = await res.json();
+		renderArtists(artists);
 		if (claudeAvailable) {
 			els.claudeWrap.hidden = false;
 			els.modePill.textContent = "Claude available";
@@ -174,7 +214,7 @@ async function init() {
 		}
 	} catch (err) {
 		console.error(err);
-		toast("Couldn't load vibes", "err");
+		toast("Couldn't load artists", "err");
 	}
 }
 

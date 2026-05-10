@@ -4,14 +4,19 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="theme-color" content="#0a0a0f">
-	<title>Lyric Generator</title>
-	<meta name="description" content="Generate song lyrics by vibe.">
+	<title>The Big Three — Lyric Generator</title>
+	<meta name="description" content="Generate lyrics in the style of Drake, J. Cole, or Kendrick Lamar — solo or in combination.">
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 	<link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
+	<div class="bg" aria-hidden="true">
+		<img src="/static/big-three.png" alt="" class="bg__img">
+		<div class="bg__veil"></div>
+	</div>
+
 	<header class="nav">
 		<div class="container nav__inner">
 			<a class="brand" href="/">
@@ -20,54 +25,53 @@
 						<path d="M5 4v16M5 4l8 4-8 4M5 12l11 4-11 4" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
 					</svg>
 				</span>
-				<span>Lyric Generator</span>
+				<span>The Big Three</span>
 			</a>
-			<span class="muted" id="mode-pill" style="font-size: 0.85rem;"></span>
+			<span class="muted nav__mode" id="mode-pill"></span>
 		</div>
 	</header>
 
 	<main class="page">
 		<section class="container hero">
-			<span class="hero__eyebrow"><span class="dot"></span> Templated lyrics with optional Claude polish</span>
-			<h1 class="hero__title">Tell us the <span class="grad">vibe</span>. We'll write the song.</h1>
-			<p class="hero__lead">Pick a mood and an optional theme word. The offline engine assembles rhymed verses; if you've got a Claude API key, we'll send it through Claude for a polish.</p>
+			<span class="hero__eyebrow"><span class="dot"></span> Drake · J. Cole · Kendrick</span>
+			<h1 class="hero__title">Write a song <span class="grad">in their voice</span>.</h1>
+			<p class="hero__lead">Pick one — or stack two, or all three. The generator builds original lyrics inspired by the artists' settings, themes, and emotional register. Combinations remix their voices into something new.</p>
 		</section>
 
 		<section class="container section">
-			<form class="card" id="form" style="max-width: 720px; margin: 0 auto;">
+			<form class="card" id="form">
 				<div class="field">
-					<label class="field__label" for="vibe">Vibe</label>
-					<div class="vibe-grid" id="vibe-grid"></div>
-					<input type="hidden" name="vibe" id="vibe" value="heartbroken">
+					<label class="field__label">Artists <span class="field__hint">pick one or more</span></label>
+					<div class="artist-grid" id="artist-grid"></div>
 				</div>
 
 				<div class="field">
-					<label class="field__label" for="theme">Theme (optional)</label>
-					<input class="input" type="text" id="theme" placeholder="rain, midnight, highway, ocean…">
+					<label class="field__label" for="theme">Theme <span class="field__hint">optional</span></label>
+					<input class="input" type="text" id="theme" placeholder="loyalty, the city, my mama, late nights…">
 				</div>
 
 				<div class="field" id="claude-toggle-wrap" hidden>
-					<label class="row" style="cursor: pointer;">
+					<label class="row claude-toggle">
 						<input type="checkbox" id="useClaude">
-						<span>Use Claude API (slower, better quality)</span>
+						<span>Use Claude API (slower, much better)</span>
 					</label>
 				</div>
 
-				<div class="row" style="justify-content: space-between; align-items: center;">
+				<div class="row form__actions">
 					<button type="button" class="btn btn--ghost btn--sm" id="reroll" hidden>↻ Reroll</button>
 					<button type="submit" class="btn btn--primary btn--lg" id="generate-btn">
-						<span id="generate-label">Generate lyrics</span>
+						<span id="generate-label">Generate the verse</span>
 					</button>
 				</div>
 			</form>
 
-			<div id="output-host" class="mt-6" aria-live="polite"></div>
+			<div id="output-host" aria-live="polite"></div>
 		</section>
 	</main>
 
 	<footer class="footer">
 		<div class="container footer__row">
-			<span>Lyric Generator · for fun, not for streaming royalties</span>
+			<span>Original lyrics in the style of — not actual songs. PG‑13 by design.</span>
 			<span><a href="https://github.com/ysawiris/lyric-generator" rel="noopener">GitHub</a></span>
 		</div>
 	</footer>

@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
 import { generateLyrics, lyricsToText } from "./lib/generate.js";
-import { VIBE_KEYS } from "./lib/wordbanks.js";
+import { ARTIST_KEYS, ARTISTS } from "./lib/wordbanks.js";
 import { generateWithClaude, isClaudeAvailable } from "./lib/claude.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -13,31 +13,31 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-app.get("/api/vibes", (_req, res) => {
-	res.json({ vibes: VIBE_KEYS, claudeAvailable: isClaudeAvailable() });
+app.get("/api/artists", (_req, res) => {
+	const artists = ARTIST_KEYS.map((k) => ({
+		key: k,
+		display: ARTISTS[k].display,
+		color: ARTISTS[k].color,
+	}));
+	res.json({ artists, claudeAvailable: isClaudeAvailable() });
 });
 
 app.post("/api/generate", async (req, res) => {
-	const { vibe, theme = "", seed, useClaude = false } = req.body || {};
-
-	if (!vibe || !VIBE_KEYS.includes(vibe)) {
-		return res.status(400).json({
-			error: `vibe must be one of: ${VIBE_KEYS.join(", ")}`,
-		});
-	}
+	const { artists, theme = "", seed, useClaude = false } = req.body || {};
 
 	try {
 		if (useClaude && isClaudeAvailable()) {
-			const result = await generateWithClaude({ vibe, theme });
+			const result = await generateWithClaude({ artists, theme });
 			return res.json({ ...result, mode: "claude" });
 		}
 
 		const seedNum = seed === undefined || seed === null || seed === "" ? undefined : Number(seed);
-		const result = generateLyrics({ vibe, theme, seed: seedNum });
+		const result = generateLyrics({ artists, theme, seed: seedNum });
 		return res.json({ ...result, text: lyricsToText(result), mode: "offline" });
 	} catch (err) {
 		console.error("generate failed:", err.message);
-		return res.status(500).json({ error: err.message });
+		const status = /unknown|at least one/i.test(err.message) ? 400 : 500;
+		return res.status(status).json({ error: err.message });
 	}
 });
 
