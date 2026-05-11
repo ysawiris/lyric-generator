@@ -2,10 +2,10 @@ import "dotenv/config";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
-import { generateLyrics, lyricsToText } from "./lib/generate.js";
-import { ARTIST_KEYS, ARTISTS } from "./lib/wordbanks.js";
+import { generateLyrics, lyricsToText } from "./public/lib/generate.js";
+import { ARTIST_KEYS, ARTISTS } from "./public/lib/wordbanks.js";
 import { generateWithClaude, isClaudeAvailable } from "./lib/claude.js";
-import { SCHEMES, SCHEME_KEYS, DEFAULT_SCHEME } from "./lib/schemes.js";
+import { SCHEMES, SCHEME_KEYS, DEFAULT_SCHEME } from "./public/lib/schemes.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;

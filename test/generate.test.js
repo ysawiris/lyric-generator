@@ -1,10 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { generateLyrics, lyricsToText } from "../lib/generate.js";
-import { ARTIST_KEYS, ARTISTS, mergeArtists } from "../lib/wordbanks.js";
-import { rhymes, rhymeKey, findRhymingLine, lastWord } from "../lib/rhyme.js";
+import { generateLyrics, lyricsToText } from "../public/lib/generate.js";
+import { ARTIST_KEYS, ARTISTS, mergeArtists } from "../public/lib/wordbanks.js";
+import { rhymes, rhymeKey, findRhymingLine, lastWord } from "../public/lib/rhyme.js";
 import { parseSections } from "../lib/claude.js";
-import { ReverseMarkov } from "../lib/markov.js";
+import { ReverseMarkov } from "../public/lib/markov.js";
 
 test("rhymeKey extracts trailing vowel cluster + consonants", () => {
 	assert.equal(rhymeKey("midnight"), "ight");

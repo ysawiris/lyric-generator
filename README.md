@@ -29,11 +29,15 @@ npm run dev
 
 **Claude mode.** If you've set `ANTHROPIC_API_KEY`, the UI shows a checkbox that routes generation through `claude-haiku-4-5-20251001` with a system prompt that enforces structure and style.
 
-## API
+## Hosting
+
+The static UI runs fully in the browser (offline mode only) and deploys to GitHub Pages from `public/` via `.github/workflows/pages.yml`. The Express server is only needed locally for the Claude-enhanced path.
+
+## API (local server only)
 
 ```
-GET  /api/vibes        → { vibes: ["heartbroken", ...], claudeAvailable: bool }
-POST /api/generate     → { vibe, theme, seed?, sections, text, mode }
+GET  /api/artists      → { artists, schemes, defaultScheme, claudeAvailable, orders }
+POST /api/generate     → { artists, theme, seed?, sections, text, mode }
 GET  /healthcheck      → { status: "UP" }
 ```
 
@@ -41,9 +45,11 @@ POST body:
 
 ```json
 {
-  "vibe": "summer",
-  "theme": "ocean",
+  "artists": ["drake", "kendrick"],
+  "theme": "the city",
   "seed": 42,
+  "order": 2,
+  "scheme": "AABB",
   "useClaude": false
 }
 ```
@@ -51,18 +57,23 @@ POST body:
 ## Project layout
 
 ```
-app.js                 — Express server
-lib/wordbanks.js       — vibes, lexical pools, templates
-lib/rhyme.js           — pseudo-rhyme matcher (vowel-cluster + equivalence groups)
-lib/generate.js        — offline generation
-lib/claude.js          — optional Claude API path
-public/                — UI (vanilla HTML/CSS/JS)
-test/generate.test.js  — node:test suite
+app.js                       — Express server (local dev / Claude path)
+lib/claude.js                — optional Claude API path (server-only)
+public/index.html            — UI entry
+public/js/app.js             — browser bootstrap (imports generator directly)
+public/lib/wordbanks.js      — artists, lexical pools, templates
+public/lib/rhyme.js          — pseudo-rhyme matcher
+public/lib/markov.js         — Nth-order reverse Markov chain
+public/lib/schemes.js        — rhyme scheme catalog
+public/lib/generate.js       — offline generation
+public/lib/corpora.js        — per-artist seed lines
+test/generate.test.js        — node:test suite
+.github/workflows/pages.yml  — GitHub Pages deploy
 ```
 
-## Adding a new vibe
+## Adding a new artist
 
-Edit `lib/wordbanks.js`, add a new entry under `VIBES` with `nouns`, `verbs`, `places`, `feelings`, `colors`, `time`, and `templates`. Re-run `npm test`. The UI picks up new vibes automatically via `/api/vibes`.
+Edit `public/lib/wordbanks.js`, add a new entry under `ARTISTS` with `display`, `color`, `nouns`, `verbs`, `places`, `feelings`, `colors`, `time`, and `templates`. Add seed lines under the same key in `public/lib/corpora.js`. Re-run `npm test`.
 
 ## License
 

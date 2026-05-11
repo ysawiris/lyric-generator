@@ -1,3 +1,7 @@
+import { generateLyrics, lyricsToText, MIN_ORDER, MAX_ORDER, DEFAULT_ORDER } from "../lib/generate.js";
+import { ARTISTS, ARTIST_KEYS } from "../lib/wordbanks.js";
+import { SCHEMES, SCHEME_KEYS, DEFAULT_SCHEME } from "../lib/schemes.js";
+
 const $ = (sel) => document.querySelector(sel);
 
 const els = {
@@ -8,8 +12,6 @@ const els = {
 	schemeGrid: $("#scheme-grid"),
 	schemeHint: $("#scheme-hint"),
 	theme: $("#theme"),
-	useClaude: $("#useClaude"),
-	claudeWrap: $("#claude-toggle-wrap"),
 	output: $("#output-host"),
 	modePill: $("#mode-pill"),
 	generateBtn: $("#generate-btn"),
@@ -26,8 +28,8 @@ const ORDER_HINTS = {
 	5: "5 — verbatim corpus echoes",
 };
 
-let selectedOrder = 2;
-let selectedScheme = "AABB";
+let selectedOrder = DEFAULT_ORDER;
+let selectedScheme = DEFAULT_SCHEME;
 let schemesMeta = [];
 
 const SUBLINES = {
@@ -74,7 +76,6 @@ function renderArtists(artists) {
 		)
 		.join("");
 
-	// Default: pre-select Drake
 	toggleArtist("drake");
 
 	els.artistGrid.addEventListener("click", (e) => {
@@ -88,7 +89,6 @@ function toggleArtist(key) {
 	const btn = els.artistGrid.querySelector(`[data-key="${key}"]`);
 	if (!btn) return;
 	if (selectedArtists.has(key)) {
-		// Don't let user de-select the last one
 		if (selectedArtists.size === 1) return;
 		selectedArtists.delete(key);
 		btn.classList.remove("is-active");
@@ -126,9 +126,8 @@ function renderResult(result) {
 	const meta = [];
 	if (result.theme) meta.push(`Theme: ${escapeHtml(result.theme)}`);
 	if (result.scheme) meta.push(`Scheme: ${escapeHtml(result.scheme)}`);
-	if (result.mode === "offline" && result.order != null) meta.push(`Order: ${result.order}`);
-	if (result.mode === "offline" && result.seed != null) meta.push(`Seed: ${result.seed}`);
-	if (result.mode === "claude") meta.push(`Mode: Claude`);
+	if (result.order != null) meta.push(`Order: ${result.order}`);
+	if (result.seed != null) meta.push(`Seed: ${result.seed}`);
 
 	let lineDelay = 0;
 	const sections = result.sections
@@ -179,19 +178,6 @@ function sectionsToText(sections) {
 	return sections.map((s) => `[${s.label}]\n${s.lines.join("\n")}`).join("\n\n");
 }
 
-async function generate({ artists, theme, useClaude, order, scheme }) {
-	const res = await fetch("/api/generate", {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ artists, theme, useClaude, order, scheme }),
-	});
-	if (!res.ok) {
-		const err = await res.json().catch(() => ({}));
-		throw new Error(err.error || `HTTP ${res.status}`);
-	}
-	return res.json();
-}
-
 async function handleSubmit() {
 	const artists = [...selectedArtists];
 	if (artists.length === 0) {
@@ -199,7 +185,6 @@ async function handleSubmit() {
 		return;
 	}
 	const theme = els.theme.value.trim();
-	const useClaude = els.useClaude?.checked || false;
 	const order = selectedOrder;
 	const scheme = selectedScheme;
 
@@ -208,7 +193,10 @@ async function handleSubmit() {
 	renderLoading();
 
 	try {
-		const result = await generate({ artists, theme, useClaude, order, scheme });
+		// Yield to the browser so the loading state paints before chain build.
+		await new Promise((r) => setTimeout(r, 0));
+		const result = generateLyrics({ artists, theme, order, scheme });
+		result.text = lyricsToText(result);
 		renderResult(result);
 		els.generateLabel.textContent = "Generate again";
 	} catch (err) {
@@ -269,24 +257,22 @@ els.schemeGrid?.addEventListener("click", (e) => {
 	setScheme(btn.dataset.scheme);
 });
 
-async function init() {
-	try {
-		const res = await fetch("/api/artists");
-		const { artists, schemes, defaultScheme, claudeAvailable } = await res.json();
-		renderArtists(artists);
-		if (schemes && schemes.length) {
-			renderSchemes(schemes, defaultScheme || schemes[0].key);
-		}
-		if (claudeAvailable) {
-			els.claudeWrap.hidden = false;
-			els.modePill.textContent = "Claude available";
-		} else {
-			els.modePill.textContent = "Offline mode";
-		}
-	} catch (err) {
-		console.error(err);
-		toast("Couldn't load artists", "err");
-	}
+function init() {
+	const artists = ARTIST_KEYS.map((k) => ({
+		key: k,
+		display: ARTISTS[k].display,
+		color: ARTISTS[k].color,
+	}));
+	const schemes = SCHEME_KEYS.map((k) => ({
+		key: k,
+		name: SCHEMES[k].name,
+		pattern: SCHEMES[k].pattern,
+		description: SCHEMES[k].description,
+		visual: SCHEMES[k].visual,
+	}));
+	renderArtists(artists);
+	renderSchemes(schemes, DEFAULT_SCHEME);
+	els.modePill.textContent = "Offline mode";
 }
 
 els.form.addEventListener("submit", (e) => {
